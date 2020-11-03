@@ -1,6 +1,6 @@
-using testest
+using WCSRO
 using Test
 
-@testset "testest.jl" begin
+@testset "WCSRO.jl" begin
     # Write your tests here.
 end

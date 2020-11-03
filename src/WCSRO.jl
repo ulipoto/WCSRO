@@ -1,4 +1,4 @@
-module testest
+module WCSRO
 
 # Write your package code here.
 
