@@ -1,5 +1,9 @@
 module WCSRO
 
-# Write your package code here.
+import DelimitedFiles
+import LinearAlgebra
+include("init.jl")
+
+export init_matrix
 
 end
