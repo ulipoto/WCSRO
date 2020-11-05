@@ -10,6 +10,9 @@ function init_matrix()
     However, values like limit may shall be input variables later on."
     global limit = 5 #calculating limit
     global sequence = []
+    global atom_a = "Bla"
+    global atom_b = "Ble"
+    global atom_c = "Blu"
     global a_counter = 0
     global b_counter = 0
     global c_counter = 0
@@ -22,6 +25,7 @@ function init_matrix()
     global u = (readdlm("Al3Ti.xyz",'\t', skipstart = 2, skipblanks = true))
     global xyz = zeros(total_atoms, 3)
     global dist_matrix = zeros(total_atoms, total_atoms)
+    elements = 1
     for i in 1:total_atoms
         l = split(u[i])
         push!(sequence, l[1])
@@ -30,17 +34,20 @@ function init_matrix()
         xyz[i, 3] = parse(Float64, l[4])
 
         "Here, the numbers of atoms A, B and C are being counted"
-        if i == 1
-            global atom_a = l[1]
-            global a_counter += 1
-        elseif i > 1 && atom_a == l[1]
-            global a_counter += 1
-                elseif i > 1 && atom_a != l[1]
-            global atom_b = l[1]
-            global b_counter += 1
-        else
-            global atom_c = l[1]
-            global c_counter += 1
+        atom_a = sequence[1]
+        if sequence[i] == atom_a
+            a_counter += 1
+        elseif sequence[i] != atom_a && elements == 1
+            atom_b = sequence[i]
+            b_counter += 1
+            elements = 2
+        elseif elements == 2
+            if sequence[i] != atom_a && sequence[i] != atom_b
+                atom_c = sequence[i]
+                c_counter += 1
+            else
+                b_counter += 1
+            end
         end
 
         "This determines the number of different lattice constants"
@@ -130,5 +137,3 @@ function init_matrix()
     popfirst!(perimeters)
 end
 init_matrix()
-println(angles)
-println(trunc(Int, length(angles)*2/3))
