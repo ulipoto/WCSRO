@@ -136,4 +136,4 @@ function init_matrix()
     sort!(perimeters)
     popfirst!(perimeters)
 end
-init_matrix()
+#init_matrix()

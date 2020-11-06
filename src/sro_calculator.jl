@@ -3,9 +3,22 @@ include("init.jl")
 "This file uses the constructed matrices from init.jl to calculate the SRO para-
 -meters. The shuffling of the given atom sequence shall be done in another file
 to preserve some clarity."
-init_matrix()
-function SRO()
-    seq = sequence
+global alpha_ab_array = []
+global alpha_ac_array = []
+global alpha_bc_array = []
+global alpha_aaa_array = []
+global alpha_aab_array = []
+global alpha_abb_array = []
+global alpha_bbb_array = []
+global alpha_aac_array = []
+global alpha_acc_array = []
+global alpha_bbc_array = []
+global alpha_bcc_array = []
+global alpha_ccc_array = []
+global alpha_abc_array = []
+
+function SRO(current_sequence)
+    seq = current_sequence
     x_a = a_counter/(a_counter + b_counter + c_counter)
     x_b = b_counter/(a_counter + b_counter + c_counter)
     x_c = c_counter/(a_counter + b_counter + c_counter)
@@ -16,9 +29,7 @@ function SRO()
     n_bb = 0
     n_bc = 0
     n_cc = 0
-    global alpha_ab_array = []
-    global alpha_ac_array = []
-    global alpha_bc_array = []
+
     global n_counter = 0
 
     #Necessary parameters for triplet interactions
@@ -32,16 +43,6 @@ function SRO()
     n_bcc = 0
     n_ccc = 0
     n_abc = 0
-    global alpha_aaa_array = []
-    global alpha_aab_array = []
-    global alpha_abb_array = []
-    global alpha_bbb_array = []
-    global alpha_aac_array = []
-    global alpha_acc_array = []
-    global alpha_bbc_array = []
-    global alpha_bcc_array = []
-    global alpha_ccc_array = []
-    global alpha_abc_array = []
 
     "This following code is used for binary alloys:"
     if c_counter == 0
@@ -93,7 +94,7 @@ function SRO()
                 end
             end
         end
-        println(n_counter)
+        #println(n_counter)
         alpha_aab = 1 - n_aab/((x_a*x_a*x_b)*3*n_counter)
         if alpha_aab == -Inf
             alpha_aab = -1
@@ -104,9 +105,9 @@ function SRO()
             alpha_abb = -1
         end
         push!(alpha_abb_array, alpha_abb)
-        println(alpha_ab_array)
-        println(alpha_aab_array)
-        println(alpha_abb_array)
+        #println(alpha_ab_array)
+        #println(alpha_aab_array)
+        #println(alpha_abb_array)
 
     else #condition for atom ternary alloy
 
@@ -297,11 +298,10 @@ function SRO()
         end
         push!(alpha_abc_array, alpha_abc)
     end
-    println(n_counter, " ", n_aaa, " ", n_aab, " ", n_abb, " ", n_bbb, " ", n_abc)
-    println(n_counter)
+    #println(n_counter, " ", n_aaa, " ", n_aab, " ", n_abb, " ", n_bbb, " ", n_abc)
+    #println(n_counter)
 end
-SRO()
-println(alpha_abc_array)
-println(a_counter)
-println(b_counter)
-println(c_counter)
+#println(alpha_abc_array)
+#println(a_counter)
+#println(b_counter)
+#println(c_counter)
