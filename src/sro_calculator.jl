@@ -1,4 +1,5 @@
 include("init.jl")
+include("atom_shuffle.jl")
 
 "This file uses the constructed matrices from init.jl to calculate the SRO para-
 -meters. The shuffling of the given atom sequence shall be done in another file
@@ -16,12 +17,19 @@ global alpha_bbc_array = []
 global alpha_bcc_array = []
 global alpha_ccc_array = []
 global alpha_abc_array = []
+global SRO_array = []
 
-function SRO(current_sequence)
-    seq = current_sequence
+#Important SRO factors!!
+global pair_factor = 1
+global triplet_factor = 0.5
+
+function SRO(current_sequence, iterations)
     x_a = a_counter/(a_counter + b_counter + c_counter)
     x_b = b_counter/(a_counter + b_counter + c_counter)
     x_c = c_counter/(a_counter + b_counter + c_counter)
+
+    for iter = 1:iterations
+    seq = current_sequence[iter]
     #Necessary parameters for pair interactions
     n_aa = 0
     n_ab = 0
@@ -43,6 +51,7 @@ function SRO(current_sequence)
     n_bcc = 0
     n_ccc = 0
     n_abc = 0
+
 
     "This following code is used for binary alloys:"
     if c_counter == 0
@@ -109,6 +118,9 @@ function SRO(current_sequence)
         #println(alpha_aab_array)
         #println(alpha_abb_array)
 
+        #Finally, a sum of all SROs is being calculated
+        SRO_value = pair_factor*abs(alpha_ab)+triplet_factor*abs(alpha_aab)*abs(alpha_abb)
+        push!(SRO_array, SRO_value)
     else #condition for atom ternary alloy
 
         #Here, the pair part in case of a ternary alloy begins:
@@ -297,9 +309,14 @@ function SRO(current_sequence)
             alpha_abc = -1
         end
         push!(alpha_abc_array, alpha_abc)
+
+        #Finally, a sum of all SROs is being calculated
+        SRO_value = pair_factor*abs(alpha_ab)*abs(alpha_ac)*abs(alpha_bc) + triplet_factor*abs(alpha_aab)*abs(alpha_abb)*abs(alpha_aac)*abs(alpha_acc)*abs(alpha_bbc)*abs(alpha_bcc)*abs(alpha_abc)
+        push!(SRO_array, abs(SRO_value))
     end
     #println(n_counter, " ", n_aaa, " ", n_aab, " ", n_abb, " ", n_bbb, " ", n_abc)
     #println(n_counter)
+    end
 end
 #println(alpha_abc_array)
 #println(a_counter)

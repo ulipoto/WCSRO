@@ -4,15 +4,16 @@ necessary arrays for calculating pair- and triplet-SRO parameters are built."
 using DelimitedFiles
 using LinearAlgebra
 
-function init_matrix()
+file = "Al3Ti.xyz"
+function init_matrix(filename)
 
     "All this parameters are currently necessary for subsequent calculations.
     However, values like limit may shall be input variables later on."
     global limit = 5 #calculating limit
     global sequence = []
     global atom_a = "Bla"
-    global atom_b = "Ble"
-    global atom_c = "Blu"
+    global atom_b = "No second element"
+    global atom_c = "No third element"
     global a_counter = 0
     global b_counter = 0
     global c_counter = 0
@@ -21,7 +22,7 @@ function init_matrix()
     global perimeters = zeros(1)
 
     "The .xyz-file is being converted here:"
-    global total_atoms = parse(Int, readline(open("Al3Ti.xyz", "r")))
+    global total_atoms = parse(Int, readline(open(filename, "r")))
     global u = (readdlm("Al3Ti.xyz",'\t', skipstart = 2, skipblanks = true))
     global xyz = zeros(total_atoms, 3)
     global dist_matrix = zeros(total_atoms, total_atoms)
@@ -136,4 +137,3 @@ function init_matrix()
     sort!(perimeters)
     popfirst!(perimeters)
 end
-#init_matrix()
