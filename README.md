@@ -1,7 +1,15 @@
+# WCSRO
+
 Welcome!
+This package calculates the Warren-Cowley short range order parameter (SRO) for arbitrary alloys. It is meant to consider not only pairs, but also triplets.
 
-This package calculates the Warren-Cowley short range order parameter (SRO) for binary and ternary alloys. It is meant to consider not only pairs, but also triplets.
+## Usage
 
-The current version includes all important initialisation and sorting steps as well as the calculations of all SROs. However, everything is quite chaotic.
+To use the calculator, open WCSRO.jl. All further steps are explained there.
 
-The package is still in development, do NOT use it!
+## Latest update 
+* The package can now handle an arbitrary number of different elements.
+* Periodic boundary conditions have been implemented.
+* Usage of structs (getting rid of global variables)
+* More detailed comments
+* better plots, little syntax improvements
