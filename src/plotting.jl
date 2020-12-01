@@ -18,9 +18,9 @@ function xyzplot(Initializer, best_sequence)
         for i = 1:length(sequence)
             if sequence[i] == idx
                 j += 1
-                xyz[j, 1] = X.xyz[i, 1]
-                xyz[j, 2] = X.xyz[i, 2]
-                xyz[j, 3] = X.xyz[i, 3]
+                xyz[j, 1] = X.fcoords[i][1]
+                xyz[j, 2] = X.fcoords[i][2]
+                xyz[j, 3] = X.fcoords[i][3]
             end
         end
         scatter!(plt, xyz[:, 1], xyz[:, 2], xyz[:, 3], markersize = 11, color = my_colors[k],  label=idx)
