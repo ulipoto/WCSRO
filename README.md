@@ -7,9 +7,5 @@ This package calculates the Warren-Cowley short range order parameter (SRO) for 
 
 To use the calculator, open WCSRO.jl. All further steps are explained there.
 
-## Latest update 
-* The package can now handle an arbitrary number of different elements.
-* Periodic boundary conditions have been implemented.
-* Usage of structs (getting rid of global variables)
-* More detailed comments
-* better plots, little syntax improvements
+
+*__This package is still under development. If you have issues, feel free to contact me!__*
