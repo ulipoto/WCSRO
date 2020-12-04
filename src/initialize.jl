@@ -1,24 +1,26 @@
 using IterTools
 using LinearAlgebra
-include("structs.jl")
 
 """
 This file contains a function 'initmatrix' for processing an input file.
 Furthermore, there are two helping functions located below for creating correct
 dictionary keys. These functions are necessary in the file 'sro_calculator.jl'.
 """
+
+"""
+initialize(file)
+
+Necessary arrays and regex definitions are created in this function. The imported
+file will be opened, informations like elements and coordinates are extracted and
+distributed to corresponding arrays.
+"""
 function initialize(file)
     filename = file
-    """
-    Necessary arrays and regex definitions are created below. The important file
-    will be opened, informations like elements and coordinates extracted and
-    distributed to corresponding arrays.
-    """
     element_counter = [] #list of occurrence of all elements
     elements = [] #list of all different occurring elements
     element_dict = Dict() # Dictionary of all elements and their respective occurrence.
     fcoords = [] #All fractional coordinates
-    lattice = [] #lattice paramter array
+    lattice = [] #lattice parameter array
     s = read(open(filename, "r"), String)
     # Regex to find the number of occurrence for a given element
     atomic_int_regex = r"(?<=\s|^)\d+(?=\s|$)"
@@ -118,12 +120,12 @@ function initialize(file)
 end
 
 """
-The next two functions return the corresponding key in the SRO dictionary for
-a given element pair or triplet.
-NOTE: While input value D should be a dictionary, "a" should be a vector of
-length 2 and 3 respectively.
+get_pair_key(D::Dict, a)
+
+The function returns the corresponding key in the SRO dictionary for
+a given element pair.
 """
-function get_pair_key(D, a)
+function get_pair_key(D::Dict, a::Tuple)
     perms = collect(permutations(a, 2))
     for i = 1:length(perms)
         if haskey(D, (perms[i][1], perms[i][2])) == true
@@ -132,7 +134,13 @@ function get_pair_key(D, a)
     end
 end
 
-function get_triplet_key(D, a)
+"""
+get_pair_key(D::Dict, a)
+
+The function returns the corresponding key in the SRO dictionary for
+a given element triplet.
+"""
+function get_triplet_key(D::Dict, a::Tuple)
     perms = collect(permutations(a, 3))
     for i = 1:length(perms)
         if haskey(D, (perms[i][1], perms[i][2], perms[i][3])) == true

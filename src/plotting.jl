@@ -1,14 +1,17 @@
 using Plots
 using Random
 
+"""
+xyzplot(Initializer, best_sequence)
+
+Just a little script for displaying the minimum structure. If you hate my
+chosen color palette, feel free to change it ;-)
+"""
 function xyzplot(Initializer, best_sequence)
-    """
-    Just a little script for displaying the minimum structure. If you hate my
-    chosen color palette, feel free to change it ;-)
-    """
     X = Initializer
     sequence = best_sequence
-    plt = scatter()
+    plt = scatter(title = "Optimized Supercell", xlabel = "X", ylabel = "Y",
+    gridlinewidth = 1, zlabel = "Z")
     my_colors = palette(:Set3_12)
     k = 0
     for (idx, val) in X.element_dict
