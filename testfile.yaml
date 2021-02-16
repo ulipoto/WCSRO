@@ -1,0 +1,34 @@
+# This is a generic input file for the WCSRO calculator. Most parts are similar
+# to a POSCAR-file and self-explanatory.
+
+structure:
+    lattice: [
+       [5.450270,  0.000000,  0.000000],
+       [0.000000,  5.450270,  0.000000],
+       [0.000000,  0.000000,  5.450270]
+    ]
+
+    #Important: The species list indicate the sublattice, NOT the real elements!
+    #E.g. the first four atoms can be either Al, Zn or Sn.
+    species: ["Zn", "Zn", "Zn", "Zn", "S", "S", "S", "S"]
+    fcoords: [
+        [0.000000, 0.000000, 0.000000],
+        [0.000000, 0.500000, 0.500000],
+        [0.500000, 0.000000, 0.500000],
+        [0.500000, 0.500000, 0.000000],
+        [0.250000, 0.250000, 0.750000],
+        [0.250000, 0.750000, 0.250000],
+        [0.750000, 0.250000, 0.250000],
+        [0.750000, 0.750000, 0.750000]
+    ]
+
+# Multiplication factor in every spatial direction.
+replicate: [2, 2, 2]
+# If you want Vacancies, use the keyword "Vac"
+composition:
+  Zn:
+    Al: 16
+    Zn: 8
+    Sn: 8
+  S:
+    S: 32
