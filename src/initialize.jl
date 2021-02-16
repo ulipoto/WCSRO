@@ -1,126 +1,46 @@
-using IterTools
+include("structure.jl")
 using LinearAlgebra
-using YAML
-include("structs.jl")
 
-"""
-This file contains a function 'initmatrix' for processing an input file.
-The input file can either be of type .yaml or POSCAR.
-"""
-
-"""
-initialize(file)
-
-Necessary structures for SRO calculation are created and stored in a object
-of type "Backpack".
-"""
 function initialize(file)
-
-# PART OF POSCAR DATA EXTRACTION
-    filename = file
-    if occursin("POSCAR", filename) == true
-        element_counter = [] #list of occurrence of all elements
-        elements = [] #list of all different occurring elements
-        element_dict = Dict() # Dictionary of all elements and their respective occurrence.
-        fcoords = [] #All fractional coordinates
-        lattice = [] #lattice parameter array
-        s = read(open(filename, "r"), String)
-        # Regex to find the number of occurrence for a given element
-        atomic_int_regex = r"(?<=\s|^)\d+(?=\s|$)"
-        element_regex = r"\b[^\d\W]+\b"
-        fcoords_regex = r"(?P<fx>\d+\.\d+)\s+(?P<fy>\d+\.\d+)\s+(?P<fz>\d+\.\d+).*"
-
-        # Elements and their respective occurrence are extracted from the file.
-        # A dictionaray will be created subsequently.
-        for i in eachmatch(atomic_int_regex, s)
-            push!(element_counter, parse(Int64, i.match))
-        end
-        for i in eachmatch(element_regex, s)
-            if i.match == "direct"
-                break
-            else
-                push!(elements, i.match)
-            end
-        end
-        for (idx, val) in enumerate(elements)
-            element_dict[val[1]] = (idx, element_counter[idx])
-        end
-        # Fractional coordinates and lattice parameters are extracted
-        for (num, line) in enumerate(eachline(filename))
-            if num > 8
-                push!(fcoords, [parse(Float64, match(fcoords_regex, line)[1]),  parse(Float64, match(fcoords_regex, line)[2]),
-                parse(Float64, match(fcoords_regex, line)[3])])
-            end
-        end
-        for (num, line) in enumerate(eachline(filename))
-            if num > 2 && num < 6
-                push!(lattice, parse(Float64, match(fcoords_regex, line)[1]),  parse(Float64, match(fcoords_regex, line)[2]),
-                parse(Float64, match(fcoords_regex, line)[3]))
-            end
-        end
-        lattice = reshape(lattice, 3, 3)
-    else
-    # PART OF YAML DATA EXTRACTION
-        data = YAML.load_file(file)
-        lattice = data["lattice parameters"]
-        comp = data["composition"]
-        rep = data["replication"]
-        element_dict = Dict()
-        fcoords = []
-        while length(lattice) < 3
-            push!(lattice, lattice[1])
-        end
-        lattice = Diagonal(lattice)
-        uc = [0 0 0; 0.5 0.5 0; 0.5 0 0.5; 0 0.5 0.5]
-        uc = uc/maximum(rep)
-        xtrans = collect(0:1/rep[1]:0.9999)
-        ytrans = collect(0:1/rep[2]:0.9999)
-        ztrans = collect(0:1/rep[3]:0.9999)
-        for i = 1:length(xtrans), j = 1:length(ytrans), k = 1:length(ztrans)
-            for m = 1:size(uc)[1]
-                push!(fcoords, [uc[m, 1]+xtrans[i], uc[m, 2]+xtrans[j], uc[m, 3]+xtrans[k]])
-            end
-        end
-        comp_vec = []
-        for (idx, val) in enumerate(comp)
-            x = round(val[2]/100*length(fcoords), digits = 0)
-            push!(comp_vec, Int(x))
-        end
-        if sum(comp_vec) > length(fcoords)
-            comp_vec[end] -= 1
-        elseif sum(comp_vec) < length(fcoords)
-            comp_vec[end] += 1
-        end
-        for (idx, val) in enumerate(comp)
-            element_dict[val[1]] = (idx, comp_vec[idx])
-        end
-    end
-
+# PART OF YAML DATA EXTRACTION
+    data = YAML.load_file(file)
+    raw = data["structure"]
+    s = Structure(
+        hcat(raw["lattice"]...)',
+        raw["species"],
+        hcat(raw["fcoords"]...)',
+        data["replicate"],
+        data["composition"]
+    )
+    sc = supercell(s)
 # Now, the shortest distance is being evualated by periodic boundary conditions
 # and stored in 'vec_mat'
     rg = [1, 0, -1]
     shifts = (collect(Iterators.product(rg, rg, rg)))
     shifts = reshape(shifts, :, 1)
     cart_shifts = []
-    distance_matrix = zeros(length(fcoords), length(fcoords))
-    vec_mat = zeros(length(fcoords), length(fcoords), 3)
+    distance_matrix = zeros(size(sc.fcoords)[1], size(sc.fcoords)[1])
+    vec_mat = zeros(size(sc.fcoords)[1], size(sc.fcoords)[1], 3)
     min_dist = 1e-6
     for i in shifts
         push!(cart_shifts, collect(i))
     end
-    for (i, fc1) in enumerate(fcoords)
-        for (j, fc2) in enumerate(fcoords)
+
+    for i in 1:size(sc.fcoords)[1]
+        for j in 1:size(sc.fcoords)[1]
             if i == j
                 continue
             else
             d_vecs = []
-            d_vecs = [fc2 + sh - fc1 for sh in cart_shifts]
+            for sh = 1:length(cart_shifts)
+                push!(d_vecs, sc.lattice*reshape(sc.fcoords[j, :] + cart_shifts[sh] - sc.fcoords[i, :], (3, 1)))
+            end
             for k = 1:length(d_vecs)
                 for l = 1:length(d_vecs[k])
                     d_vecs[k][l] = round(d_vecs[k][l], digits = 5)
                 end
             end
-            min_vec = [1000, 1000, 1000]
+            min_vec = [Inf, Inf, Inf]
                 for k in d_vecs
                     if norm(k) < norm(min_vec) && norm(k) > min_dist
                         vec_mat[i, j, :] = k
@@ -130,110 +50,121 @@ function initialize(file)
             end
         end
     end
-
 # The distance matrix is being created out of the shortest distances
     for i = 1:size(vec_mat)[1]
-        for j = i:size(vec_mat)[1]
-            distance_matrix[i, j] = norm(vec_mat[i, j, :])
+        for j = 1:size(vec_mat)[1]
+            distance_matrix[i, j] = round(norm(vec_mat[i, j, :]), digits = 4) #changed round(digits 3!)
         end
     end
-# Now, all different distances are evaluated and a corresponding shell matrix
-# and a matrix containing all triplets is made.
-# First for pairs....
-    distances = zeros(1)
-    for i = 1:size(distance_matrix)[1], j = 1:size(distance_matrix)[1]
-        if any(x -> isapprox(x, distance_matrix[i, j], atol = 1e-2), distances) == false
-            push!(distances, distance_matrix[i, j])
-        end
-    end
-    sort!(distances)
-    distance_dict = Dict()
-    for i = 1:length(distances)
-        distance_dict[distances[i]] = i-1
-    end
-    pair_shell_matrix = zeros(Int64, size(distance_matrix)[1], size(distance_matrix)[2])
-    for i = 1:size(distance_matrix)[1], j = i:size(distance_matrix)[2]
-        pair_shell_matrix[i, j] = Int(distance_dict[distance_matrix[i, j]])
-    end
-    all_pairs = []
-    exp_pairs = zeros(length(distance_dict))
-    for i = 1:size(pair_shell_matrix)[1]
-        for j = 1:size(pair_shell_matrix)[2]
-            if pair_shell_matrix[i, j] != 0
-                exp_pairs[pair_shell_matrix[i, j]] += 1
-                push!(all_pairs, [i, j, pair_shell_matrix[i, j]])
-            end
-        end
-    end
-    while exp_pairs[end] == 0
-        pop!(exp_pairs)
-    end
-# ...now for triplets
-    all_triplets = []
-    exp_triplets = zeros(3)
-    for i = 1:size(pair_shell_matrix)[1]
-        for j = 1:size(pair_shell_matrix)[2]
-            if pair_shell_matrix[i, j] > 0 && pair_shell_matrix[i, j] < 3
-                for k = j:size(pair_shell_matrix)[1]
-                    if pair_shell_matrix[i, k] > 0 && pair_shell_matrix[i, k] < 3
-                        exp_triplets[pair_shell_matrix[i, j] + pair_shell_matrix[i, k] - 1] += 1
-                        push!(all_triplets, [i, j, k, pair_shell_matrix[i, j] + pair_shell_matrix[i, k] - 1])
-                    end
-                end
-            end
-        end
-    end
-
-"Weight matrices are being created. This should help at SRO calculation.
-The pair weights are stored in an N x N x S matrix, where N is the number of
-different elements in the system and S the number of coordinations shells.
-Thus, in a binary system, a pair between element A (=1) and B (=2), where B is
-in the third corrdination shell, is stored at position [1, 2, 3].
-Same is true for triplets. There, however, there are only three shells: First
-with both in the first shell, second with first/second and third with
-second/second."
-    pair_weight_matrix = zeros(length(element_dict), length(element_dict), length(exp_pairs))
-    for i = 1:length(exp_pairs)
-        for (idx1, val1) in enumerate(element_dict)
-            for (idx2, val2) in enumerate(element_dict)
-                if val1[2][1] == val2[2][1]
-                    pair_weight_matrix[val1[2][1], val2[2][1], i] = 1/(exp_pairs[i]*(val1[2][2]/length(fcoords))*(val1[2][2]/length(fcoords)))
-                else
-                    pair_weight_matrix[val1[2][1], val2[2][1], i] = 1/(2*exp_pairs[i]*(val1[2][2]/length(fcoords))*(val1[2][2]/length(fcoords)))
-                end
-            end
-        end
-    end
-    triplet_weight_matrix = zeros(length(element_dict), length(element_dict), length(element_dict), length(exp_triplets))
-    for i = 1:length(exp_triplets)
-        for (idx1, val1) in enumerate(element_dict)
-            for (idx2, val2) in enumerate(element_dict)
-                for (idx3, val3) in enumerate(element_dict)
-                    vals = [val1[2][1], val2[2][1], val3[2][1]]
-                    sort!(vals)
-                    if vals[1] == vals[2] && vals[1] == vals[3] && vals[2] == vals[3]
-                        triplet_weight_matrix[vals[1], vals[2], vals[3], i] = 1/(exp_triplets[i]*(val1[2][2]/length(fcoords))*
-                        (val2[2][2]/length(fcoords))*(val3[2][2]/length(fcoords)))
-                    elseif vals[1] != vals[2] && vals[1] != vals[3] && vals[2] != vals[3]
-                        triplet_weight_matrix[vals[1], vals[2], vals[3], i] = 1/(6*exp_triplets[i]*(val1[2][2]/length(fcoords))*
-                        (val2[2][2]/length(fcoords))*(val3[2][2]/length(fcoords)))
-                    else
-                        triplet_weight_matrix[vals[1], vals[2], vals[3], i] = 1/(3*exp_triplets[i]*(val1[2][2]/length(fcoords))*
-                        (val2[2][2]/length(fcoords))*(val3[2][2]/length(fcoords)))
-                    end
-                end
-            end
-        end
-    end
-"Matrices for counting all possible pairs and triplet configurations
-are being created"
-    pair_SRO = zeros(length(element_dict), length(element_dict), length(distance_dict))
-    triplet_SRO = zeros(length(element_dict), length(element_dict), length(element_dict), length(exp_triplets))
-    X = Backpack(element_dict, distances, all_pairs, all_triplets, pair_weight_matrix, triplet_weight_matrix, pair_SRO, triplet_SRO)
-    return X
+# Structures from the functions below are created here.
+    distances = (sort!(unique(distance_matrix)))
+    distance_dict = Dict(dist => index-1 for (index, dist) in enumerate(distances))
+    shell_matrix = map(num -> distance_dict[num], distance_matrix)
+    shells = coord_shells(shell_matrix)
+    triplet_shell_matrix = triplet_shell(shell_matrix)
+    map!(t -> cutoff(t), triplet_shell_matrix, triplet_shell_matrix) #induces cutoff
+    mole_fracs, elem_dict = mole_fractions(sc)
+    pair_prefactors = calc_pair_pref(mole_fracs, shells, shell_matrix)
+    trip_prefactors = calc_trip_prefs(triplet_shell_matrix, shells)
+# Finally, the two arrays for SRO value storage
+    alpha = ones(length(mole_fracs), length(mole_fracs), length(shells))
+    beta = ones(length(mole_fracs), length(mole_fracs), length(mole_fracs), length(shells), length(shells), length(shells))
+# DONE :-)
+    return Backpack(sc, elem_dict, mole_fracs, shell_matrix, triplet_shell_matrix, alpha, beta, pair_prefactors, trip_prefactors)
 end
 
-#file = "ab.yml"
-file = "POSCAR.mp-88_AB"
-X = initialize(file)
-X
+function cutoff((s1, s2, s3), cutoff=30)
+# Simple cutoff help function
+    any([s1 >= cutoff, s2 >= cutoff, s3 >= cutoff ]) && return (0,0,0)
+    any([s1 == 0, s2 == 0, s3 == 0]) && return (0,0,0)
+    return (s1, s2, s3)
+end
+
+function triplet_shell(shell_matrix::Array, cutoff = Inf)
+# constructs a 3D-matrix containing a tuple of all three shells between
+# atoms i, j and k
+    sm = shell_matrix
+    triplet_shell_matrix = [(sm[i, j], sm[j, k], sm[i, k]) for i=1:size(sm)[1], j=1:size(sm)[1], k=1:size(sm)[1]]
+    return triplet_shell_matrix
+end
+
+function coord_shells(shell_matrix::Array)
+# returns a dict with the shell number as key and the number of appearing atoms
+# (with pbc) as values
+    shell_dict = Dict(i => 0.0 for i = 1:maximum(shell_matrix))
+    for i = 1:size(shell_matrix)[1], j = i:size(shell_matrix)[1]
+        shell_matrix[i, j] == 0 && continue
+        shell_dict[shell_matrix[i, j]] += 2/size(shell_matrix)[1]
+    end
+    return shell_dict
+end
+
+function calc_trip_prefs(triplet_shell_matrix::Array, M::Dict)
+# returns a dictionary with all occurring triplets as keys and their corresponding
+# prefactors
+    tt = unique(triplet_shell_matrix) #all triplet types
+    triplet_prefactors = Dict(map(t-> trip_pref_helper(t, M, size(triplet_shell_matrix)[1]), tt))
+    return triplet_prefactors
+end
+
+function trip_pref_helper(s::Tuple, M::Dict, sc_size)
+# Calculates the fixed part ν and rules out cases with a zero
+    if any(i -> i == 0, s) == true
+        return (0,0,0) => nothing
+    else
+        return s => 1/(3*sc_size)*(1/(M[s[1]]*M[s[2]])+1/(M[s[1]]*M[s[3]])+1/(M[s[2]]*M[s[3]]))
+    end
+end
+
+function calc_pair_pref(mole_fractions, shells, shell_matrix)
+# returns an 3D-array with all prefactors. Prefactor for a pair between elements
+# 1 and 3 - 4 shells apart- is found at pair_prefactors[1, 3, 4] (and [3, 1, 4])
+    pair_prefactors = zeros(length(mole_fractions), length(mole_fractions), length(shells))
+    for i = 1:length(shells)
+        for (idx1, val1) in enumerate(mole_fractions)
+            if val1[1][2] != 0
+                for (idx2, val2) in enumerate(mole_fractions)
+                    if val2[1][2] != 0
+                        #Factor 2 because there is no double counting later on
+                        pair_prefactors[val1[1][2], val2[1][2], i] = 2/(val1[2]*val2[2]*shells[i]*size(shell_matrix)[1])
+                    end
+                end
+            end
+        end
+    end
+    return pair_prefactors
+end
+
+function mole_fractions(s::Structure)
+# Returns mole fraction and an dictionary with all elements in it. The values
+# in element_dict are the keys for mole_fractions
+    mf = Dict()
+    elem_dict = Dict()
+    seq = s.species
+    elem_num = 1
+    for (idx1, val1) in enumerate(s.composition)
+        sub_sum = (sum(values(val1[2])))
+        for (idx2, val2) in enumerate(val1[2])
+            if val2[1] == "Vac" #Vacancy exception: returns 0
+                mf[(idx1, 0)] = val2[2]/sub_sum
+                elem_dict[val2[1]] = (idx1, 0)
+                i = 1
+                j = 1
+            else
+                mf[(idx1, elem_num)] = val2[2]/sub_sum #key is sublattice + element number
+                elem_dict[val2[1]] = (idx1, elem_num) #key above is the value here
+                i = 1
+                j = 1
+                elem_num += 1
+            end
+            for i = 1:length(seq)
+                if seq[i] == val1[1] && j <= val2[2]
+                    seq[i] = val2[1]
+                    j += 1
+                end
+            end
+            i += 1
+        end
+    end
+    return mf, elem_dict
+end
